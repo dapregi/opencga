@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import random
 
 
 _SEX = {
@@ -17,7 +18,38 @@ _KAR_SEX = {
 }
 _VARIABLE_FIELDS = ['Relationship', 'Siblings', 'Second Order', 'Third Order', 'Other Comments']
 
-FNAME_TEMPLATE = 'ALL.chr{}_GRCh38_sites.20170504.vcf.gz'
+_FNAME_TEMPLATE = 'ALL.chr{}_GRCh38_sites.20170504.vcf.gz'
+
+_DISORDERS = [
+    {'id': 'OMIM:126200', 'name': 'MULTIPLE SCLEROSIS, SUSCEPTIBILITY TO; MS', 'source': 'OMIM'},
+    {'id': 'OMIM:266600', 'name': 'INFLAMMATORY BOWEL DISEASE (CROHN DISEASE) 1; IBD1', 'source': 'OMIM'},
+    {'id': 'OMIM:605803', 'name': 'DERMATITIS, ATOPIC, 2; ATOD2 ', 'source': 'OMIM'},
+    {'id': 'OMIM:177900', 'name': 'PSORIASIS 1, SUSCEPTIBILITY TO; PSORS1', 'source': 'OMIM'},
+    {'id': 'OMIM:125853', 'name': 'DIABETES MELLITUS, NONINSULIN-DEPENDENT; NIDDM ', 'source': 'OMIM'},
+    {'id': 'OMIM:209850', 'name': 'AUTISM', 'source': 'OMIM'},
+    {'id': 'OMIM:106300', 'name': 'SPONDYLOARTHROPATHY, SUSCEPTIBILITY TO, 1; SPDA1', 'source': 'OMIM'},
+    {'id': 'OMIM:310200', 'name': 'MUSCULAR DYSTROPHY, DUCHENNE TYPE; DMD', 'source': 'OMIM'},
+    {'id': 'OMIM:606232', 'name': 'PHELAN-MCDERMID SYNDROME; PHMDS', 'source': 'OMIM'}
+]
+
+_PHENOTYPES = [
+    {'id': 'HP:0001324', 'name': 'Muscle weakness', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0100280', 'name': 'Crohn\'s disease', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0001047', 'name': 'Atopic dermatitis', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0003765', 'name': 'Psoriasiform dermatitis', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0005978', 'name': 'Type II diabetes mellitus', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0000717', 'name': 'Autism', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0001369', 'name': 'Arthritis', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0003560', 'name': 'Muscular dystrophy', 'source': 'HPO', 'status': 'OBSERVED'},
+    {'id': 'HP:0000708', 'name': 'Behavioral abnormality', 'source': 'HPO', 'status': 'OBSERVED'}
+]
+
+
+    # Ankylosing Spondylitis:
+#     id: DOID:7147
+#     name: ankylosing spondylitis
+#     source: Human Disease Ontology
+
 
 
 def to_camel_case(text):
@@ -45,7 +77,7 @@ def create_variable_sets(header):
 def create_individuals(ind_info):
     text = []
     text.append('individuals:')
-    for ind in ind_info:
+    for i, ind in enumerate(ind_info):
         text.append('{}- id: {}'.format(' '*2, ind['Individual ID']))
         text.append('{}name: {}'.format(' '*4, ind['Individual ID']))
         if ind['Paternal ID'] != '0':
@@ -58,6 +90,22 @@ def create_individuals(ind_info):
         text.append('{}karyotypicSex: {}'.format(' '*4, _KAR_SEX[ind['Gender']]))
         text.append('{}population:'.format(' '*4))
         text.append('{}name: {}'.format(' '*6, ind['Population']))
+
+        if i % 5 == 0:
+            index = random.randrange(len(_DISORDERS))
+
+            phenotype = _PHENOTYPES[index]
+            text.append('{}phenotypes:'.format(' ' * 4))
+            text.append('{}- id: {}'.format(' ' * 6, phenotype['id']))
+            text.append('{}name: {}'.format(' ' * 8, phenotype['name']))
+            text.append('{}source: {}'.format(' ' * 8, phenotype['source']))
+            text.append('{}STATUS: {}'.format(' ' * 8, phenotype['status']))
+
+            disorder = _DISORDERS[index]
+            text.append('{}disorders:'.format(' ' * 4))
+            text.append('{}- id: {}'.format(' ' * 6, disorder['id']))
+            text.append('{}name: {}'.format(' ' * 8, disorder['name']))
+            text.append('{}source: {}'.format(' ' * 8, disorder['source']))
 
         text.append('{}annotationSets:'.format(' '*4))
         text.append('{}- id: relation'.format(' '*6))
@@ -109,17 +157,14 @@ def create_files():
     text = []
     text.append('files:')
     for chrom in list(range(1, 23)) + ['X', 'Y']:
-        text.append('{}- name: {}'.format(' '*2, FNAME_TEMPLATE.format(chrom)))
+        text.append('{}- name: {}'.format(' ' * 2, _FNAME_TEMPLATE.format(chrom)))
         text.append('{}path: {}'.format(' '*4, 'data'))
     return '\n'.join(text)
 
 
 def _setup_argparse():
     desc = 'This script creates automatically all Python RestClients files'
-    parser = argparse.ArgumentParser(
-        description=desc,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('ped_file', help='Pedigree file path')
     parser.add_argument('outfile', help='Output file path')
@@ -128,6 +173,7 @@ def _setup_argparse():
 
 
 def main():
+    random.seed(42)
 
     args = _setup_argparse()
 
